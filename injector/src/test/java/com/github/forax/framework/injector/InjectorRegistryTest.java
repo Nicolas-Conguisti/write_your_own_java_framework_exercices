@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 @SuppressWarnings("unused")
 public class InjectorRegistryTest {
-  /*
+
   @Nested
   public class Q1 {
     @Test @Tag("Q1")
@@ -156,7 +156,6 @@ public class InjectorRegistryTest {
       );
     }
   }
-
 
   @Nested
   public class Q4 {
@@ -545,5 +544,4 @@ public class InjectorRegistryTest {
       assertThrows(NullPointerException.class, () -> registry.registerProviderClass(null));
     }
   }
-  */
 }
