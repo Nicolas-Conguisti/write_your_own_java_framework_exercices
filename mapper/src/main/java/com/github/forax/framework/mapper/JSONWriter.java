@@ -1,13 +1,13 @@
 package com.github.forax.framework.mapper;
 
 import java.beans.PropertyDescriptor;
+import java.lang.reflect.Method;
+import java.lang.reflect.RecordComponent;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class JSONWriter {
 
@@ -26,7 +26,7 @@ public final class JSONWriter {
 
         return switch(o){
             case null -> "null";
-            case Boolean _, Double _, Integer _ -> o + "";
+            case Boolean _, Double _, Integer _ -> String.valueOf(o); // Or o + "" (idiomatic method)
             case String s -> "\"" + s + "\"";
             case Object obj -> {
                 var type = obj.getClass();
@@ -53,19 +53,35 @@ public final class JSONWriter {
 
         @Override
         protected Generator computeValue(Class<?> type) {
-            var beanInfo = Utils.beanInfo(type);
-            var generators = Arrays.stream(beanInfo.getPropertyDescriptors())
-                    .filter(property -> !property.getName().equals("class"))
-                    .filter(property -> property.getReadMethod() != null)
-                    .<Generator>map(property -> {
-                        var name = property.getName();
-                        var getter = property.getReadMethod();
 
-                        var jsonProperty = getter.getAnnotation(JSONProperty.class);
-                        if (jsonProperty != null) {
-                            name = jsonProperty.value();
+            List<?> properties;
+            if (type.isRecord()) {
+                properties = recordProperties(type);
+            }
+            else{
+                properties = beanProperties(type);
+            }
+
+            var generators = properties.stream()
+                    .<Generator>map(property -> {
+                        String name;
+                        Method getter;
+                        switch(property){
+                            case RecordComponent r -> {
+                                name = r.getName();
+                                getter = r.getAccessor();
+                            }
+                            case PropertyDescriptor p -> {
+                                name = p.getName();
+                                getter = p.getReadMethod();
+                            }
+                            default -> throw new IllegalArgumentException("Type is not a bean and not a record !");
                         }
 
+                        var jsonProperty = getter.getAnnotation(JSONProperty.class);
+                        if(jsonProperty != null){
+                            name = jsonProperty.value();
+                        }
                         var prefixe = "\"" + name + "\": ";
                         return (writer, bean) -> {
                             var value = Utils.invokeMethod(bean, getter);
@@ -83,5 +99,27 @@ public final class JSONWriter {
     @FunctionalInterface
     private interface Generator {
         String generate(JSONWriter writer, Object bean);
+    }
+
+    private static List<PropertyDescriptor> beanProperties(Class<?> type) {
+        var beanInfo = Utils.beanInfo(type);
+        var properties = beanInfo.getPropertyDescriptors();
+        return Arrays.stream(properties)
+                .flatMap(property -> {
+                    if(property == null
+                        || property.getName().equals("class")
+                        || property.getReadMethod() == null){
+                        return null;
+                    }
+                    return Stream.of(property);
+                })
+                .toList();
+    }
+
+    private static List<RecordComponent> recordProperties(Class<?> type) {
+        var rawComponents = type.getRecordComponents();
+        return Arrays.stream(rawComponents)
+                .filter(Objects::nonNull)
+                .toList();
     }
 }
