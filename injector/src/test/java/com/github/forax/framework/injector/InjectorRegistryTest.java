@@ -491,6 +491,18 @@ public class InjectorRegistryTest {
           () -> assertEquals(new Point(0, 0), circle.point)
       );
     }
+
+    @Test @Tag("Q6")
+    public void testNico() {
+      var registry = new InjectorRegistry();
+      registry.registerProvider(Point.class, Point::new);
+      registry.registerProviderClass(Circle.class, Circle.class);
+
+      var circle = registry.lookupInstance(Circle.class);
+
+      assertEquals(new Point(0, 0), circle.point);
+      assertEquals(new Point(0, 0), circle.center);
+    }
   }
 
   @Nested
