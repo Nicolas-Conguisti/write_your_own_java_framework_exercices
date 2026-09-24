@@ -1,5 +1,6 @@
 package com.github.forax.framework.mapper;
 
+import java.beans.IntrospectionException;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.lang.reflect.RecordComponent;
@@ -54,7 +55,7 @@ public final class JSONWriter {
         @Override
         protected Generator computeValue(Class<?> type) {
 
-            List<?> properties;
+            List<PropertyDescriptor> properties;
             if (type.isRecord()) {
                 properties = recordProperties(type);
             }
@@ -64,20 +65,8 @@ public final class JSONWriter {
 
             var generators = properties.stream()
                     .<Generator>map(property -> {
-                        String name;
-                        Method getter;
-                        switch(property){
-                            case RecordComponent r -> {
-                                name = r.getName();
-                                getter = r.getAccessor();
-                            }
-                            case PropertyDescriptor p -> {
-                                name = p.getName();
-                                getter = p.getReadMethod();
-                            }
-                            default -> throw new IllegalArgumentException("Type is not a bean and not a record !");
-                        }
-
+                        var name = property.getName();
+                        var getter = property.getReadMethod();
                         var jsonProperty = getter.getAnnotation(JSONProperty.class);
                         if(jsonProperty != null){
                             name = jsonProperty.value();
@@ -116,10 +105,15 @@ public final class JSONWriter {
                 .toList();
     }
 
-    private static List<RecordComponent> recordProperties(Class<?> type) {
-        var rawComponents = type.getRecordComponents();
-        return Arrays.stream(rawComponents)
-                .filter(Objects::nonNull)
-                .toList();
+    private static List<PropertyDescriptor> recordProperties(Class<?> type) {
+        return Arrays.stream(type.getRecordComponents()).map(el -> {
+            try {
+                var name = el.getName();
+                var accessor = el.getAccessor();
+                return new PropertyDescriptor(name, accessor, null);
+            } catch (IntrospectionException e) {
+                throw new IllegalStateException(e);
+            }
+        }).toList();
     }
 }
