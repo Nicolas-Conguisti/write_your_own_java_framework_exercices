@@ -60,10 +60,10 @@ public final class InjectorRegistry {
     /**
      * Register into "instances" a type T and his implementation, based on an entire class (T or a class that extends T).
      * In the declaration, <T'> means that all the T types are the very sames, whatever it is.
-     * providerClass is a class that has to be constructed. For this, we use the injectables properties of the type T.
+     * providerClass is a class that has to be constructed.
      * Calls registerProvider with a supplier that constructs the instance of providerClass.
      * Take into account if the constructor have arguments and create each (args)
-     * Take into account the injectables properties of the type T.
+     * Take into account the injectables properties of the providerClass.
      * We use type.cast() to cast the Object returned by supplier.get() to the same type as the class type in parameter.
      */
     public <T> void registerProviderClass(Class<T> type, Class<? extends T> providerClass){
@@ -71,7 +71,7 @@ public final class InjectorRegistry {
         Objects.requireNonNull(providerClass);
 
         var constructor = findConstructor(providerClass);
-        var properties = findInjectableProperties(type);
+        var properties = findInjectableProperties(providerClass);
 
         registerProvider(type, () -> {
             var args = Arrays.stream(constructor.getParameterTypes())
@@ -88,8 +88,8 @@ public final class InjectorRegistry {
     }
 
     /**
-     * Public method to register class and instance, witch have the very same type
-     * Does not contain the <'T> annotation (user-friendly)
+     * Public method to register class and instance, which have the very same type
+     * Does not contain the <'T> type parameter (user-friendly)
      */
     public void registerProviderClass(Class<?> serviceClass) {
         Objects.requireNonNull(serviceClass);
@@ -97,7 +97,7 @@ public final class InjectorRegistry {
     }
 
     /**
-     * Private method that contains the <'T> annotation (not user-friendly)
+     * Private method that contains the <'T> type parameter (not user-friendly)
      */
     private <T> void registerProviderClassInternal(Class<T> serviceClass) {
         Objects.requireNonNull(serviceClass);
