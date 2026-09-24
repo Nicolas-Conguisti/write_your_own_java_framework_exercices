@@ -7,24 +7,24 @@ import java.util.stream.Collectors;
 
 public final class JSONWriter {
 
-  /**
-   * Works only with JSON primitive values, null, true, false, any integers or doubles and strings
-   */
-  public String toJSON(Object o) {
+    /**
+    * Works only with JSON primitive values, null, true, false, any integers or doubles and strings
+    */
+    public String toJSON(Object o) {
 
-    return switch(o){
-        case null -> "null";
-        case Boolean _, Double _, Integer _ -> o + "";
-        case String s -> "\"" + s + "\"";
-        case Object obj -> {
+        return switch(o){
+            case null -> "null";
+            case Boolean _, Double _, Integer _ -> o + "";
+            case String s -> "\"" + s + "\"";
+            case Object obj -> {
 
-            var generator = CACHE.get(obj.getClass());
-            yield generator.generate(this, obj);
-        }
-    };
-  }
+                var generator = CACHE.get(obj.getClass());
+                yield generator.generate(this, obj);
+            }
+        };
+    }
 
-  private static final GeneratorCache CACHE = new GeneratorCache();
+    private static final GeneratorCache CACHE = new GeneratorCache();
 
     static class GeneratorCache extends ClassValue<Generator>{
 
@@ -58,6 +58,7 @@ public final class JSONWriter {
         }
     }
 
+    @FunctionalInterface
     private interface Generator {
         String generate(JSONWriter writer, Object bean);
     }
