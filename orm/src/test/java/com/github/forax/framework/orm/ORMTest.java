@@ -654,7 +654,7 @@ public class ORMTest {
       assertThrows(NullPointerException.class, () -> ORM.createRepository(null));
     }
   }
-/*
+
   @Nested
   public class Q7 {
 
@@ -766,7 +766,7 @@ public class ORMTest {
     }
   }
 
-
+/*
   @Nested
   class Q8 {
 
