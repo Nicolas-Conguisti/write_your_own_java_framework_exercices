@@ -5,14 +5,8 @@ import java.beans.BeanInfo;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.io.Serial;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Proxy;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.lang.reflect.*;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -167,7 +161,6 @@ public final class ORM {
     var beanInfo = Utils.beanInfo(beanType);
     var constructor = Utils.defaultConstructor(beanType);
     var tableName = findTableName(beanType);
-
     return repositoryType.cast(Proxy.newProxyInstance(
             repositoryType.getClassLoader(),
             new Class<?>[] {repositoryType},
@@ -193,23 +186,28 @@ public final class ORM {
 
   static Object toEntityClass(ResultSet resultSet, BeanInfo beanInfo, Constructor<?> constructor) throws SQLException {
     var instance = Utils.newInstance(constructor);
-    for (var property : beanInfo.getPropertyDescriptors()) {
-      var setter = property.getWriteMethod();
-      if (setter != null && !property.getName().equals("class")) {
-        var columnName = findColumnName(property);
-        var value = resultSet.getObject(columnName);
-        Utils.invokeMethod(instance, setter, value);
+    var properties = beanInfo.getPropertyDescriptors();
+    var column = 1;
+    for(var property : properties){
+      if(property.getName().equals("class")){
+        continue;
       }
+      var setter = property.getWriteMethod();
+      var argument = resultSet.getObject(column++);
+      Utils.invokeMethod(instance, setter, argument);
     }
     return instance;
   }
 
   static List<Object> findAll(Connection connection, String sqlQuery, BeanInfo beanInfo, Constructor<?> constructor) throws SQLException {
     var list = new ArrayList<>();
-    try (var statement = connection.prepareStatement(sqlQuery);
-         var resultSet = statement.executeQuery()) {
-      while (resultSet.next()) {
-        list.add(toEntityClass(resultSet, beanInfo, constructor));
+    try(PreparedStatement statement = connection.prepareStatement(sqlQuery)) {
+      //statement.setObject(1, "James Bond"); pas de requête paramétrique
+      try(var resultSet = statement.executeQuery()) {
+        while(resultSet.next()) {
+          var instance = toEntityClass(resultSet, beanInfo, constructor);
+          list.add(instance);
+        }
       }
     }
     return list;
