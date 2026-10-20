@@ -1,6 +1,7 @@
 package org.github.forax.framework.interceptor;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -76,16 +77,19 @@ public final class InterceptorRegistry {
   public <T> T createProxy(Class<T> type, T delegate){
     Objects.requireNonNull(type);
     Objects.requireNonNull(delegate);
-    return type.cast(Proxy.newProxyInstance(
+    InvocationHandler handler = (Object proxy, Method method, Object[] args) -> {
+        var invocation = cache.computeIfAbsent(method, m -> {
+            var interceptors = findInterceptors(m); // Don't capture "method" !! Use m instead of Method
+            return getInvocation(interceptors);
+        });
+        return invocation.proceed(delegate, method, args);
+    };
+    var proxy = Proxy.newProxyInstance(
         type.getClassLoader(),
         new Class<?>[] {type},
-        (Object proxy, Method method, Object[] args) -> {
-            var invocation = cache.computeIfAbsent(method, m -> {
-                var interceptors = findInterceptors(m); // Don't capture "method" !! Use m instead of Method
-                return getInvocation(interceptors);
-            });
-            return invocation.proceed(delegate, method, args);
-        }
-    ));
+        handler
+    );
+
+    return type.cast(proxy);
   }
 }
